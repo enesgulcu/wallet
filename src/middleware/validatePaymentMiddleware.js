@@ -7,12 +7,11 @@ export const config = {
 };
 
 // Transaction limits
-const DAILY_PAYMENT_LIMIT = 5;
 const MAX_AMOUNT = 10000;
 
 export const validatePaymentMiddleware = async (request) => {
   const { userId, amount, transactionId, isPaymentVerified } =
-    await request.json();
+    await request.body;
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -20,13 +19,16 @@ export const validatePaymentMiddleware = async (request) => {
 
   if (!user) {
     await logPaymentAttempt(userId, amount, transactionId, "User not found");
-    return NextResponse.json({ status: 404, message: "User not found" });
+    return NextResponse.json(
+      { status: "error", message: "User not found" },
+      { status: 404 }
+    );
   }
 
   // Fetch payment attempts made by the user today
   const todayPayments = await prisma.transaction.findMany({
     where: {
-      walletId: user.walletId,
+      userId: user.id,
       type: "payment",
       createdAt: {
         gte: new Date(new Date().setHours(0, 0, 0, 0)), // Start of the day
@@ -36,12 +38,17 @@ export const validatePaymentMiddleware = async (request) => {
   });
 
   // Check daily payment limit
-  if (todayPayments.length >= DAILY_PAYMENT_LIMIT) {
-    await logPaymentAttempt(userId, amount, transactionId, "Daily payment limit exceeded");
-    return NextResponse.json({
-      status: 403,
-      message: "Daily payment limit exceeded",
-    });
+  if (todayPayments.length > user.dailyPaymentLimit) {
+    await logPaymentAttempt(
+      userId,
+      amount,
+      transactionId,
+      "Daily payment limit exceeded"
+    );
+    return NextResponse.json(
+      { status: "error", message: "Daily payment limit exceeded" },
+      { status: 403 }
+    );
   }
 
   // Check maximum allowed payment amount
@@ -52,10 +59,13 @@ export const validatePaymentMiddleware = async (request) => {
       transactionId,
       `Maximum transaction amount exceeded (Limit: ${MAX_AMOUNT} TL)`
     );
-    return NextResponse.json({
-      status: 403,
-      message: `Maximum transaction amount exceeded (Limit: ${MAX_AMOUNT} TL)`,
-    });
+    return NextResponse.json(
+      {
+        status: "error",
+        message: `Maximum transaction amount exceeded (Limit: ${MAX_AMOUNT} TL)`,
+      },
+      { status: 403 }
+    );
   }
 
   // Check if the payment has been verified through email or SMS.
@@ -66,12 +76,16 @@ export const validatePaymentMiddleware = async (request) => {
       transactionId,
       "Payment not verified. Please verify the payment before sending request"
     );
-    return NextResponse.json({
-      status: 403,
-      message:
-        "Payment not verified. Please verify the payment before sending request",
-    });
+    return NextResponse.json(
+      {
+        status: "error",
+        message:
+          "Payment not verified. Please verify the payment before sending request",
+      },
+      { status: 403 }
+    );
   }
 
+  // If everything is valid, proceed to the next middleware or request handler
   return NextResponse.next();
 };

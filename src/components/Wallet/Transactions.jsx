@@ -1,6 +1,5 @@
 "use client";
 import { IoIosSearch, IoMdOptions } from "react-icons/io";
-import * as motion from "framer-motion/client";
 import { useState } from "react";
 import Tabs from "./Tabs";
 import TransactionItem from "./TransactionItem";
@@ -30,9 +29,9 @@ export default function Transactions() {
   return (
     <div className="md:mx-10">
       <div className="md:p-6 p-2 flex flex-col gap-y-10">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col gap-y-3 md:flex-row justify-between items-center">
           <h2 className="text-2xl font-medium text-purple-900">İşlemlerim</h2>
-          <div className="flex gap-x-5 justify-center items-center">
+          <div className="flex gap-x-5 md:justify-center items-center">
             <div className="flex justify-center items-center gap-x-3 px-3 py-2 rounded-lg bg-white border">
               <IoIosSearch />
               <input
@@ -46,10 +45,10 @@ export default function Transactions() {
             </button>
           </div>
         </div>
-        {/** <Tabs /> */}
-        <div>Tabs Sonra tamamlayacağım</div>
-        <div>
-          <ul className="mt-4 shadow border rounded-lg divide-y bg-white">
+        <Tabs />
+
+        <div className="flex justify-center items-center  ">
+          <ul className="mt-4 w-full max-w-xl  shadow border rounded-lg divide-y bg-white">
             {testTransactions.map((item) => (
               <TransactionItem key={item.title} transactionData={item} />
             ))}
